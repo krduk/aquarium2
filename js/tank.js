@@ -291,6 +291,32 @@ class Tank {
     });
   }
 
+  // 初級水槽（casual）における自然交配の上限チェック（手動お迎えは無制限のまま、自然増殖のみストッパーをかける）
+  getSpeciesTotalCount(speciesId) {
+    let cnt = 0;
+    for (const f of this.fishes) if (f.type === speciesId) cnt++;
+    for (const e of this.spawnedEggs) if (e.type === speciesId) cnt++;
+    return cnt;
+  }
+
+  getTotalBreedPopulation() {
+    return this.fishes.length + this.spawnedEggs.length;
+  }
+
+  // 初級水槽で自然交配がストップしている理由を返す（制限内なら null）
+  getCasualBreedLimitReason(speciesId) {
+    if (this.typeId !== 'casual') return null;
+    const maxTotal = this.typeDef.casualMaxTotalBreed || 15;
+    const maxSpecies = this.typeDef.casualMaxPerSpecies || 3;
+    if (this.getTotalBreedPopulation() >= maxTotal) {
+      return 'total';
+    }
+    if (speciesId && this.getSpeciesTotalCount(speciesId) >= maxSpecies) {
+      return 'species';
+    }
+    return null;
+  }
+
   // 交配・受精卵の進行（1秒ごと・タイムスケール連動）
   updateBreeding() {
     const ts = window.getTimeScaleMul ? window.getTimeScaleMul() : 1.0;
@@ -341,6 +367,9 @@ class Tank {
       if (f.breedCooldown > 0) f.breedCooldown = Math.max(0, f.breedCooldown - ts);
     }
 
+    // 初級水槽（ファンタジー水槽）：水槽全体で15匹以上（魚＋卵）いる場合は自然産卵をストップ（手動お迎えは引き続き無制限）
+    if (this.typeId === 'casual' && this.getCasualBreedLimitReason(null) === 'total') return;
+
     // 中級水槽では枠超過時は自動で産卵を控える（上級水槽では環境さえ良ければ枠超過でも産卵し、過密崩壊や食卵のリスクが生じるリアル仕様）
     if (this.typeId === 'harmony' && this.isOvercrowded()) return;
     if (this.waterPurity < 60) return;
@@ -355,6 +384,10 @@ class Tank {
     Object.keys(byType).forEach(type => {
       const group = byType[type];
       if (group.length < 2) return;
+
+      // 初級水槽：同種がすでに3匹以上（魚＋卵）または合計15匹に達している場合はそれ以上産卵しない
+      if (this.typeId === 'casual' && this.getCasualBreedLimitReason(type) !== null) return;
+
       const eggLoad = Number((getSpeciesAdultLoad(group[0].def) * 0.35).toFixed(1));
       if (this.typeId === 'harmony' && !this.canFitLoad(eggLoad)) return;
 

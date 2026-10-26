@@ -827,9 +827,16 @@ function refreshInspectorText() {
   // 交配ステータス判定
   const sameSpecies = tank.fishes.filter(f => f.type === inspectedFish.type && f !== inspectedFish);
   const eggLoad = Number((getSpeciesAdultLoad(def) * 0.35).toFixed(1));
+  const casualLimit = tank.getCasualBreedLimitReason(inspectedFish.type);
   let breedStatus = '';
   if (!suit.canGrow || suit.breedMul <= 0) {
     breedStatus = '⚠️ 環境が合わないため交配できません（水質・水温を確認してください）';
+  } else if (casualLimit === 'total') {
+    const maxTot = tank.typeDef.casualMaxTotalBreed || 15;
+    breedStatus = `🕊 初級水槽の自然交配上限（水槽合計 ${maxTot}匹まで）に達しているため産卵を控えています（※お迎えは自由・本格的な世代交代は中級以上の水槽へ）`;
+  } else if (casualLimit === 'species') {
+    const maxSp = tank.typeDef.casualMaxPerSpecies || 3;
+    breedStatus = `🕊 初級水槽の自然交配上限（同種 ${maxSp}匹まで）に達しているため産卵を控えています（※お迎えは自由・本格的な世代交代は中級以上の水槽へ）`;
   } else if (tank.typeId === 'harmony' && (tank.isOvercrowded() || !tank.canFitLoad(eggLoad))) {
     breedStatus = `⚠️ 中級水槽では収容枠がいっぱい（または超過）のため産卵を控えています（必要空き枠: ${eggLoad}枠）`;
   } else if (inspectedFish.growth < 0.65) {
@@ -841,7 +848,13 @@ function refreshInspectorText() {
       ? sameSpecies.some(f => f.canBreed())
       : sameSpecies.some(f => f.canBreed() && f.sex !== inspectedFish.sex && f.sex !== 'U');
     if (hasMate) {
-      breedStatus = '💕 ペア成立中！もうすぐ産卵のチャンスがあります';
+      if (tank.typeId === 'casual') {
+        const spCnt = tank.getSpeciesTotalCount(inspectedFish.type);
+        const maxSp = tank.typeDef.casualMaxPerSpecies || 3;
+        breedStatus = `💕 ペア成立中！もうすぐ産卵のチャンスがあります（初級: 同種${spCnt}/${maxSp}匹・全体${tank.getTotalBreedPopulation()}/${tank.typeDef.casualMaxTotalBreed || 15}匹まで自然交配）`;
+      } else {
+        breedStatus = '💕 ペア成立中！もうすぐ産卵のチャンスがあります';
+      }
       if (tank.typeId === 'realistic' && (tank.isOvercrowded() || !tank.canFitLoad(eggLoad))) {
         breedStatus += '（※過密のため食卵・水質急落リスクあり。水草の増設や別水槽への隔離推奨）';
       }
@@ -1130,8 +1143,8 @@ function updateManageModalUI() {
   const sizeBtnEl = document.getElementById('btn-buy-tank-size');
   const sizeCostEl = document.getElementById('tank-size-cost');
   if (!tank.typeDef.hasCapacityLimit) {
-    sizeNameEl.textContent = '魔法の無限空間 (収容枠 ∞)';
-    sizeDescEl.textContent = '初級ファンタジー水槽ではサイズ制限がなく、どんな大きさの魚も無制限に入れられます';
+    sizeNameEl.textContent = `魔法の無限空間 (お迎え枠 ∞ / 自然交配は最大${tank.typeDef.casualMaxTotalBreed || 15}匹まで)`;
+    sizeDescEl.textContent = '初級ファンタジー水槽では手動お迎えは無制限で、自然交配は「同種3匹・合計15匹」で自動的にストップするため放置でも増えすぎません';
     sizeBtnEl.disabled = true;
     sizeCostEl.textContent = '無制限';
   } else {

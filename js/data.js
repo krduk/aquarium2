@@ -13,12 +13,14 @@ const TANK_TYPES = {
     name: 'ファンタジー水槽',
     badge: '初級・万能(無制限)',
     badgeClass: 'badge-casual',
-    desc: '淡水・海水・深海のあらゆる生き物が一緒に暮らせる魔法の水槽。収容枠の制限がなく（無制限）、水温・水質の管理不要で魚に寿命もないため、自由な混泳を楽しめます。',
+    desc: '淡水・海水・深海のあらゆる生き物が一緒に暮らせる魔法の水槽。お迎え枠は無制限で寿命もありません。自然交配は「同種3匹（または水槽合計15匹）まで」で自動的に落ち着くため、増えすぎず安心です。',
     rateMul: 1.0,
     breedMul: 1.0,
     strictLevel: 0, // 0: 制限なし・寿命なし・枠無制限
     hasLifespan: false,
     hasCapacityLimit: false,
+    casualMaxPerSpecies: 3, // 初級での自然交配による同種上限（魚＋卵）
+    casualMaxTotalBreed: 15, // 初級での自然交配による水槽全体上限（魚＋卵）
     allowDirectSelect: 'unlocked',
     unlockCost: 0
   },
