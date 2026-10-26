@@ -1,0 +1,548 @@
+:root {
+  --ui-bg: rgba(10, 20, 32, 0.88);
+  --ui-border: rgba(255, 255, 255, 0.16);
+  --accent: #64ffda;
+  --accent-warm: #ffb74d;
+  --danger: #ff6b6b;
+  --text: #e0f2f1;
+}
+
+* {
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body, html {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #040911;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Meiryo, sans-serif;
+  color: var(--text);
+}
+
+#tank {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  display: block;
+  cursor: crosshair;
+}
+
+/* HUD レイヤー */
+.hud {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.hud-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.panel {
+  background-color: var(--ui-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  padding: 6px 12px;
+  pointer-events: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+}
+
+/* 水槽切り替えタブバー */
+.tank-tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 5px 8px;
+}
+
+.tank-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 7px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tank-tab:hover {
+  background: rgba(100, 255, 218, 0.12);
+  border-color: rgba(100, 255, 218, 0.4);
+}
+
+.tank-tab.active {
+  background: rgba(100, 255, 218, 0.2);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 0 12px rgba(100, 255, 218, 0.2);
+}
+
+.tank-badge {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.badge-casual {
+  background: rgba(100, 255, 218, 0.2);
+  color: #64ffda;
+}
+
+.badge-harmony {
+  background: rgba(255, 183, 77, 0.22);
+  color: #ffd54f;
+}
+
+.badge-realistic {
+  background: rgba(255, 107, 107, 0.25);
+  color: #ff8a80;
+}
+
+.tank-tab-Add {
+  background: rgba(100, 255, 218, 0.1);
+  border: 1px dashed rgba(100, 255, 218, 0.45);
+  color: var(--accent);
+}
+
+/* ステータスバー */
+.stats {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  font-size: 11px;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.stat-label {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.stat-val {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  font-family: Consolas, monospace;
+}
+
+.stat-val.warn {
+  color: var(--accent-warm);
+}
+
+.stat-val.danger {
+  color: var(--danger);
+}
+
+.controls {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+button, select {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border: 1px solid var(--ui-border);
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  transition: background 0.2s, border-color 0.2s;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+select option {
+  background: #0b1724;
+  color: #fff;
+}
+
+button:hover:not(:disabled), select:hover:not(:disabled) {
+  background: rgba(100, 255, 218, 0.18);
+  border-color: var(--accent);
+}
+
+button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.btn-release, .btn-danger {
+  background: rgba(255, 120, 120, 0.14);
+  border-color: rgba(255, 120, 120, 0.35);
+  color: #ffcdd2;
+}
+
+.btn-release:hover:not(:disabled), .btn-danger:hover:not(:disabled) {
+  background: rgba(255, 120, 120, 0.28);
+  border-color: #ff8a80;
+}
+
+.btn-accent {
+  background: rgba(100, 255, 218, 0.16);
+  border-color: rgba(100, 255, 218, 0.45);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* モーダル */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(2, 6, 12, 0.68);
+  backdrop-filter: blur(5px);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  pointer-events: auto;
+}
+
+.modal {
+  background: #0b1724;
+  border: 1px solid var(--ui-border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  width: 480px;
+  max-width: 94vw;
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.65);
+  position: relative;
+}
+
+.modal-scroll {
+  overflow-y: auto;
+  padding-right: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modal h3 {
+  margin: 0 0 12px 0;
+  font-size: 15px;
+  color: var(--accent);
+  border-bottom: 1px solid var(--ui-border);
+  padding-bottom: 8px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.close-btn {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: transparent;
+  border: none;
+  color: #99a;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+
+.close-btn:hover {
+  color: #fff;
+}
+
+/* タブ切り替え（モーダル内） */
+.sub-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.sub-tab {
+  flex: 1;
+  text-align: center;
+  padding: 6px 8px;
+  border-radius: 7px;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--ui-border);
+  cursor: pointer;
+}
+
+.sub-tab.active {
+  background: rgba(100, 255, 218, 0.18);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* カードリスト */
+.egg-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.egg-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.egg-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.egg-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.egg-desc {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.65);
+  line-height: 1.45;
+}
+
+/* 図鑑・直接お迎えグリッド */
+.list-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(125px, 1fr));
+  gap: 8px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.list-item {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--ui-border);
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  position: relative;
+}
+
+.list-item.locked {
+  opacity: 0.38;
+}
+
+.preview-canvas {
+  width: 80px;
+  height: 50px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 6px;
+  margin-bottom: 2px;
+}
+
+.env-tag {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.env-match-ok {
+  color: #64ffda;
+  font-size: 10px;
+}
+
+.env-match-ng {
+  color: #ff8a80;
+  font-size: 10px;
+}
+
+/* インスペクター */
+.inspector-body {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+#insp-canvas {
+  width: 120px;
+  height: 95px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 3px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  width: 0%;
+  transition: width 0.3s;
+}
+
+.inspector-section {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--ui-border);
+  font-size: 11px;
+}
+
+.inspector-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--ui-border);
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sex-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 11px;
+}
+
+.sex-m {
+  background: rgba(41, 182, 246, 0.22);
+  color: #4fc3f7;
+}
+
+.sex-f {
+  background: rgba(240, 98, 146, 0.22);
+  color: #f48fb1;
+}
+
+.sex-h {
+  background: rgba(186, 104, 200, 0.25);
+  color: #ce93d8;
+}
+
+.sex-u {
+  background: rgba(255, 255, 255, 0.12);
+  color: #cfd8dc;
+}
+
+/* トースト通知（性転換・交配・環境アラート） */
+#toast-container {
+  position: fixed;
+  bottom: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+  align-items: center;
+}
+
+.toast {
+  background: rgba(10, 24, 38, 0.92);
+  border: 1px solid var(--accent);
+  color: #fff;
+  padding: 7px 14px;
+  border-radius: 20px;
+  font-size: 11px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  animation: fadeInOut 4.2s forwards;
+  white-space: nowrap;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateY(8px); }
+  12% { opacity: 1; transform: translateY(0); }
+  85% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-6px); }
+}
+
+.hint {
+  position: fixed;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+body.zen-mode .hud,
+body.zen-mode .hint,
+body.zen-mode #toast-container {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+
+#zen-exit {
+  position: fixed;
+  bottom: 14px;
+  right: 14px;
+  z-index: 60;
+  display: none;
+  opacity: 0.6;
+}
+
+body.zen-mode #zen-exit {
+  display: block;
+}

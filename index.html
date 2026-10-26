@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chill Aquarium - Multi-Tank & Breeding Edition</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<canvas id="tank"></canvas>
+
+<div class="hud">
+  <!-- 1段目: 複数水槽切り替えタブバー -->
+  <div class="hud-row">
+    <div id="tank-tabs" class="panel tank-tabs-bar"></div>
+  </div>
+
+  <!-- 2段目: ステータス＆メニューボタン -->
+  <div class="hud-row">
+    <div class="panel stats">
+      <div class="stat-item">
+        <span class="stat-label">しずく</span>
+        <span id="cp" class="stat-val">300</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">環境・水温</span>
+        <span id="water-env" class="stat-val">淡水 25.0℃</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">水質</span>
+        <span id="water-purity" class="stat-val">100%</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">いきもの</span>
+        <span id="fish-count" class="stat-val">3/22</span>
+      </div>
+    </div>
+
+    <div class="panel controls">
+      <button id="btn-menu-egg" class="btn-accent">🥚 お迎え・卵</button>
+      <button id="btn-menu-encyclopedia">📖 図鑑</button>
+      <button id="btn-menu-manage">🌿 環境・水槽管理</button>
+      <button id="btn-timescale" title="クリックで時間の進み方を切り替え">⏳ 時間: 標準</button>
+      <button id="btn-light">照明: 自動(実時間)</button>
+      <button id="btn-sound">♪ 音: OFF</button>
+      <button id="btn-zen">👁 鑑賞</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<button id="zen-exit" onclick="toggleZen()">UIを表示</button>
+<div class="hint">水面クリックでエサやり / 魚をクリックで性別・交配確認・水槽間移動・リリース</div>
+
+<!-- 新しい水槽を追加モーダル -->
+<div id="modal-new-tank" class="modal-overlay">
+  <div class="modal" style="width: 520px;">
+    <button class="close-btn" onclick="closeModals()">×</button>
+    <h3>新しい水槽を追加（特性・難易度を選択）</h3>
+    <div class="modal-scroll">
+      <div style="font-size:11px; color:rgba(255,255,255,0.7); margin-bottom:4px;">
+        複数の水槽を同時に所持し、上部のタブでいつでも切り替えられます。魚を水槽間で引っ越しさせることも可能です。
+      </div>
+      <div id="new-tank-list" class="egg-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- お迎え（神秘の卵ガチャ ＆ 直接魚種・性別選択）モーダル -->
+<div id="modal-egg" class="modal-overlay">
+  <div class="modal" style="width: 560px;">
+    <button class="close-btn" onclick="closeModals()">×</button>
+    <h3>いきもののお迎え</h3>
+
+    <div class="sub-tabs">
+      <div id="subtab-egg" class="sub-tab active" onclick="switchAdoptTab('egg')">🥚 神秘の卵（ランダム孵化）</div>
+      <div id="subtab-select" class="sub-tab" onclick="switchAdoptTab('select')">🐠 魚と性別を選んでお迎え</div>
+    </div>
+
+    <!-- タブ1: 神秘の卵 -->
+    <div id="pane-adopt-egg" class="egg-list" style="display:flex;">
+      <div class="egg-card">
+        <div class="egg-info">
+          <span class="egg-title">🥚 素朴な卵</span>
+          <span class="egg-desc">穏やかな水辺に息づく小さな命が孵ります（Tier 1〜2）</span>
+        </div>
+        <button id="btn-buy-egg1" onclick="hatchEgg(1)">100 しずく</button>
+      </div>
+      <div class="egg-card">
+        <div class="egg-info">
+          <span class="egg-title">💧 蒼海の卵</span>
+          <span class="egg-desc">色鮮やかな姿や性転換する海の命が宿っています（Tier 2〜3）</span>
+        </div>
+        <button id="btn-buy-egg2" onclick="hatchEgg(2)">1,000 しずく</button>
+      </div>
+      <div class="egg-card">
+        <div class="egg-info">
+          <span class="egg-title">🌌 深淵の卵</span>
+          <span class="egg-desc">深い海の底や悠久の時を生きる神秘的な命が眠っています（Tier 3〜4）</span>
+        </div>
+        <button id="btn-buy-egg3" onclick="hatchEgg(3)">10,000 しずく</button>
+      </div>
+    </div>
+
+    <!-- タブ2: 魚種と性別を直接選んでお迎え -->
+    <div id="pane-adopt-select" style="display:none; flex-direction:column; gap:8px; overflow:hidden;">
+      <div id="direct-adopt-note" style="font-size:11px; color:var(--accent);"></div>
+      <div style="display:flex; justify-content:space-between; gap:6px; flex-wrap:wrap; font-size:11px; align-items:center;">
+        <div style="display:flex; gap:4px; align-items:center;">
+          <span>水質フィルタ:</span>
+          <button onclick="setAdoptFilter('all')">全て</button>
+          <button onclick="setAdoptFilter('fresh')">淡水</button>
+          <button onclick="setAdoptFilter('brackish')">汽水</button>
+          <button onclick="setAdoptFilter('marine')">海水</button>
+          <button onclick="setAdoptFilter('deep')">深海</button>
+        </div>
+        <div style="display:flex; gap:4px; align-items:center;">
+          <span>希望性別:</span>
+          <select onchange="setAdoptSex(this.value)">
+            <option value="auto">ランダム / 生態準拠</option>
+            <option value="M">♂ オスを指定</option>
+            <option value="F">♀ メスを指定</option>
+          </select>
+        </div>
+      </div>
+      <div id="direct-adopt-grid" class="list-grid" style="max-height: 52vh;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 図鑑モーダル（図鑑登録済みの魚を高コストで直接お迎え可能） -->
+<div id="modal-encyclopedia" class="modal-overlay">
+  <div class="modal" style="width: 580px;">
+    <button class="close-btn" onclick="closeModals()">×</button>
+    <h3>📖 いきもの図鑑・指名お迎え (<span id="encyc-count">0</span>/<span id="encyc-total">24</span>)</h3>
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; font-size:11px; margin-bottom:8px;">
+      <span style="color:rgba(255,255,255,0.75);">図鑑に登録された魚は、しずくを支払って現在の水槽へ直接お迎えできます。</span>
+      <div style="display:flex; gap:4px; align-items:center;">
+        <span>お迎え時の性別:</span>
+        <select id="encyc-sex-select" onchange="setAdoptSex(this.value)">
+          <option value="auto">ランダム / 生態準拠</option>
+          <option value="M">♂ オスを指定</option>
+          <option value="F">♀ メスを指定</option>
+        </select>
+      </div>
+    </div>
+    <div id="encyclopedia-list" class="list-grid"></div>
+  </div>
+</div>
+
+<!-- 環境・水槽管理・リセットモーダル -->
+<div id="modal-manage" class="modal-overlay">
+  <div class="modal" style="width: 520px;">
+    <button class="close-btn" onclick="closeModals()">×</button>
+    <h3>🌿 水槽の環境設定・管理</h3>
+    <div class="modal-scroll" style="font-size: 12px;">
+
+      <!-- 1. 水槽情報＆名前・一時停止 -->
+      <div class="egg-card" style="flex-direction:column; align-items:stretch; gap:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
+          <span id="manage-tank-badge" class="egg-title" style="color:var(--accent);"></span>
+          <button id="btn-toggle-pause" onclick="toggleTankPause()">⏸ 一時停止</button>
+        </div>
+        <div id="manage-tank-desc" class="egg-desc"></div>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input id="input-tank-name" type="text" placeholder="水槽の名前" style="background:rgba(0,0,0,0.35); color:#fff; border:1px solid var(--ui-border); border-radius:6px; padding:4px 8px; font-size:11px; flex:1;">
+          <button onclick="renameActiveTank()">名前変更</button>
+        </div>
+      </div>
+
+      <!-- 1.5 時間の進み方設定（全難易度・全水槽共通） -->
+      <div class="egg-card" style="flex-direction:column; align-items:stretch; gap:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+          <span class="egg-title">⏳ 時間の進み方（全難易度共通）</span>
+          <span id="manage-timescale-label" style="font-size:11px; color:var(--accent); font-weight:600;"></span>
+        </div>
+        <div style="display:flex; gap:5px; flex-wrap:wrap;">
+          <button id="btn-ts-realtime" onclick="setTimeScale('realtime')">リアル(現実時間)</button>
+          <button id="btn-ts-slow" onclick="setTimeScale('slow')">スロー(じっくり)</button>
+          <button id="btn-ts-normal" onclick="setTimeScale('normal')">標準(ゆったり)</button>
+          <button id="btn-ts-fast" onclick="setTimeScale('fast')">高速(従来速度)</button>
+          <button id="btn-ts-hyper" onclick="setTimeScale('hyper')">倍速(×3)</button>
+        </div>
+        <div id="manage-timescale-desc" class="egg-desc"></div>
+      </div>
+
+      <!-- 2. 水質・水温コントロール & 水換え -->
+      <div class="egg-card" style="flex-direction:column; align-items:stretch; gap:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span class="egg-title">🌡 水質タイプ・水温管理</span>
+          <button class="btn-accent" onclick="matchTankToFish()">✨ 中の魚に自動設定</button>
+        </div>
+        <div id="manage-env-guide" style="font-size:11px; color:#ffd54f;"></div>
+
+        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+          <span style="font-size:11px; color:rgba(255,255,255,0.7);">水質区分:</span>
+          <button id="btn-water-fresh" onclick="changeTankWaterType('fresh')">淡水</button>
+          <button id="btn-water-brackish" onclick="changeTankWaterType('brackish')">汽水</button>
+          <button id="btn-water-marine" onclick="changeTankWaterType('marine')">海水</button>
+          <button id="btn-water-deep" onclick="changeTankWaterType('deep')">深海冷水</button>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+          <div>
+            現在水温: <strong id="manage-curr-temp" style="color:var(--accent);">25.0℃</strong>
+            / 目標: <strong id="manage-target-temp">25℃</strong>
+            <span id="manage-ambient-temp" style="font-size:10px; color:rgba(255,255,255,0.6);"></span>
+          </div>
+          <div style="display:flex; gap:4px;">
+            <button onclick="adjustTargetTemp(-5)">-5℃</button>
+            <button onclick="adjustTargetTemp(-1)">-1℃</button>
+            <button onclick="adjustTargetTemp(1)">+1℃</button>
+            <button onclick="adjustTargetTemp(5)">+5℃</button>
+          </div>
+        </div>
+        <div id="manage-thermal-status" style="font-size:11px; padding:4px 8px; border-radius:6px; background:rgba(255,255,255,0.04);"></div>
+
+        <div style="display:flex; flex-direction:column; gap:6px; border-top:1px solid var(--ui-border); padding-top:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+            <span id="manage-clean-status" style="font-size:11px; color:rgba(255,255,255,0.85);">水質: 100% / 底床汚れ・コケ: 0%</span>
+            <button onclick="doCleanSludge()">🧹 底床・コケ掃除 (無料)</button>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
+            <span class="egg-desc">水換え（※上級ではフィルターがあっても硝酸塩が溜まるため定期換水が必須）</span>
+            <div style="display:flex; gap:6px;">
+              <button onclick="doWaterChange(false)">🪣 そのまま水換え(無料/21℃)</button>
+              <button class="btn-accent" onclick="doWaterChange(true)">🌡 温度合わせ水換え(50しずく)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. 水槽サイズ拡張 ＆ 設備強化 -->
+      <div class="egg-card">
+        <div class="egg-info">
+          <span class="egg-title">📐 水槽サイズ: <span id="tank-size-name" style="color:var(--accent);">45cm小型水槽</span></span>
+          <span id="tank-size-desc" class="egg-desc">魚の体長・成長に応じた収容枠の上限を増やします</span>
+        </div>
+        <button id="btn-buy-tank-size" onclick="upgradeTankSize()"><span id="tank-size-cost">800 しずく</span></button>
+      </div>
+
+      <div class="egg-card">
+        <div class="egg-info">
+          <span class="egg-title">🦐 ヤマトヌマエビ (<span id="shrimp-count">0</span>匹)</span>
+          <span class="egg-desc">水底を歩き回り、食べ残しのエサを掃除して水質悪化を防ぎます</span>
+        </div>
+        <button id="btn-buy-shrimp" onclick="buyShrimp()">300 しずく</button>
+      </div>
+
+      <div class="egg-card">
+        <div class="egg-info">
+          <span class="egg-title">🫧 ろ過フィルター (Lv.<span id="filter-lvl">1</span>)</span>
+          <span class="egg-desc">微細な泡で水を浄化し、水質の自然回復力を高めます</span>
+        </div>
+        <button id="btn-buy-filter" onclick="upgradeFilter()"><span id="filter-cost">500</span> しずく</button>
+      </div>
+
+      <div class="egg-card">
+        <div class="egg-info">
+          <span class="egg-title">🔥 ヒーター設備: <span id="heater-name" style="color:var(--accent);">小型オートヒーター</span></span>
+          <span id="heater-desc" class="egg-desc">冬場や夜間の冷え込みに負けず、熱帯魚に必要な高水温へ加温します</span>
+        </div>
+        <button id="btn-buy-heater" onclick="upgradeHeater()"><span id="heater-cost">600 しずく</span></button>
+      </div>
+
+      <div class="egg-card">
+        <div class="egg-info">
+          <span class="egg-title">❄️ クーラー・チラー設備: <span id="cooler-name" style="color:var(--accent);">未設置</span></span>
+          <span id="cooler-desc" class="egg-desc">昼間の水温上昇を抑え、冷水魚や深海生物(1〜10℃)に必要な低温へ冷却します</span>
+        </div>
+        <button id="btn-buy-cooler" onclick="upgradeCooler()"><span id="cooler-cost">400 しずく</span></button>
+      </div>
+
+      <div class="egg-card">
+        <div class="egg-info">
+          <span class="egg-title">🌿 水草・サンゴの株分け</span>
+          <span class="egg-desc">水流に揺れる水草（海水時はサンゴ風海藻）を新しく植えます</span>
+        </div>
+        <button id="btn-buy-plant" onclick="addPlant()">150 しずく</button>
+      </div>
+
+      <!-- 4. 水槽のリセット・タイプ変更・撤去 -->
+      <div class="egg-card" style="flex-direction:column; align-items:stretch; gap:8px; border-color:rgba(255,120,120,0.35);">
+        <span class="egg-title" style="color:#ff8a80;">🧹 水槽のリセット・難易度変更</span>
+        <span class="egg-desc">この水槽を初期化したり、別の特性（初級・中級・上級）の水槽に作り直せます。</span>
+        <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+          <select id="select-reset-type" style="flex:1;">
+            <option value="casual">ファンタジー水槽 (初級・万能)</option>
+            <option value="harmony">ハーモニー水槽 (中級・×1.6)</option>
+            <option value="realistic">プロフェッショナル水槽 (上級・×2.5)</option>
+          </select>
+          <select id="select-reset-fish">
+            <option value="move">魚を他の水槽へ退避（なければ還元）</option>
+            <option value="refund">魚を全てリリースしてしずくに還元</option>
+          </select>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button id="btn-delete-tank" class="btn-danger" onclick="deleteActiveTank()">🗑 この水槽を撤去</button>
+          <button class="btn-release" onclick="executeTankReset()">🧹 この設定で水槽をリセット</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- 魚インスペクターモーダル (性別・性転換・交配・水槽間移動・リリース) -->
+<div id="modal-inspector" class="modal-overlay">
+  <div class="modal" style="width: 430px;">
+    <button class="close-btn" onclick="closeModals()">×</button>
+    <h3 id="insp-name">いきものの様子</h3>
+    <div class="inspector-body">
+      <canvas id="insp-canvas" width="120" height="95"></canvas>
+      <div style="font-size: 12px; line-height: 1.55; flex: 1;">
+        <div>体長: <span id="insp-size" style="color:var(--accent); font-weight:600;"></span></div>
+        <div>占有枠: <span id="insp-load" style="color:var(--accent); font-weight:600;"></span></div>
+        <div>成長: <span id="insp-stage" style="color:var(--accent);"></span> (<span id="insp-pct"></span>%) / 健康: <span id="insp-health" style="color:var(--accent); font-weight:600;">100%</span></div>
+        <div class="progress-bar"><div id="insp-bar" class="progress-fill"></div></div>
+        <div style="margin-top:4px;">寿命: <span id="insp-lifespan" style="color:#ffd54f; font-size:11px;"></span></div>
+        <div class="progress-bar"><div id="insp-life-bar" class="progress-fill" style="background:#ffd54f;"></div></div>
+        <div style="margin-top:5px;">しずく生成: <span id="insp-rate" style="color:var(--accent); font-weight:600;"></span> / 秒</div>
+      </div>
+    </div>
+
+    <div id="insp-ecology" class="inspector-section" style="line-height: 1.6; color:rgba(255,255,255,0.88);"></div>
+    <div id="insp-breed-status" style="margin-top:6px; font-size:11px; padding:6px 8px; background:rgba(100,255,218,0.08); border-radius:6px; color:var(--accent);"></div>
+    <div id="insp-desc" style="font-size:11px; color:rgba(255,255,255,0.65); margin-top:8px;"></div>
+
+    <!-- 別の水槽へ引っ越し（水合わせオプション付き） -->
+    <div id="insp-move-box" class="inspector-section" style="display:none; flex-direction:column; gap:6px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+        <span style="white-space:nowrap;">🔄 水槽間移動:</span>
+        <select id="select-move-tank" style="flex:1;"></select>
+        <button class="btn-accent" onclick="moveInspectedFish()">引っ越し</button>
+      </div>
+      <label style="display:flex; align-items:center; gap:5px; font-size:10px; color:rgba(255,255,255,0.75); cursor:pointer;">
+        <input type="checkbox" id="chk-acclimate-move" checked>
+        <span>💧 水合わせ・温度合わせをして移動する（移動先との水温差によるショックを防止）</span>
+      </label>
+    </div>
+
+    <div class="inspector-footer">
+      <span id="insp-release-note" style="font-size:11px; color:rgba(255,255,255,0.5);">広い水辺へ還すことができます</span>
+      <button id="btn-release-fish" class="btn-release" onclick="releaseInspectedFish()">🌊 自然へ還す (+<span id="insp-refund">0</span>)</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/entities.js"></script>
+<script src="js/tank.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
